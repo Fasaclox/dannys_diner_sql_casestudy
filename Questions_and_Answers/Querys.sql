@@ -60,3 +60,75 @@ FROM
     SALES AS S INNER JOIN MENU AS M ON  S.PRODUCT_ID=M.PRODUCT_ID
 GROUP BY PRODUCT_NAME
 ORDER BY TOTAL_ORDER DESC
+
+
+--5. Which item was the most popular for each customer?
+
+SELECT 
+    T.CUSTOMER_ID, 
+    T.PRODUCT_NAME, 
+    T.ORDER_COUNT AS TOTAL_ORDER
+FROM 
+    (SELECT 
+        S.CUSTOMER_ID, 
+        M.PRODUCT_NAME, 
+        COUNT(*) AS ORDER_COUNT
+    FROM 
+        SALES AS S
+    INNER JOIN 
+        MENU AS M ON S.PRODUCT_ID = M.PRODUCT_ID 
+    GROUP BY 
+        S.CUSTOMER_ID, 
+        M.PRODUCT_NAME) AS T
+INNER JOIN 
+    (SELECT 
+        CUSTOMER_ID, 
+        MAX(ORDER_COUNT) AS MAX_ORDER_COUNT
+    FROM 
+        (SELECT 
+            S.CUSTOMER_ID, 
+            COUNT(S.PRODUCT_ID) AS ORDER_COUNT
+        FROM 
+            SALES AS S
+        GROUP BY 
+            S.CUSTOMER_ID, 
+            S.PRODUCT_ID) AS Q
+    GROUP BY 
+        CUSTOMER_ID) AS U
+ON 
+    T.CUSTOMER_ID = U.CUSTOMER_ID AND T.ORDER_COUNT = U.MAX_ORDER_COUNT
+ORDER BY T.ORDER_COUNT DESC
+
+-- OR
+
+WITH customer_orders AS (
+    SELECT
+        S.CUSTOMER_ID,
+        M.PRODUCT_NAME,
+        COUNT(*) AS ORDER_COUNT
+    FROM
+        SALES AS S
+        INNER JOIN MENU AS M ON S.PRODUCT_ID = M.PRODUCT_ID
+    GROUP BY
+        S.CUSTOMER_ID,
+        M.PRODUCT_NAME
+),
+max_orders AS (
+    SELECT
+        CUSTOMER_ID,
+        MAX(ORDER_COUNT) AS MAX_ORDER_COUNT
+    FROM
+        customer_orders
+    GROUP BY
+        CUSTOMER_ID
+)
+SELECT
+    T.CUSTOMER_ID,
+    T.PRODUCT_NAME,
+    T.ORDER_COUNT AS TOTAL_ORDER
+FROM
+    customer_orders AS T
+    INNER JOIN max_orders AS U
+        ON T.CUSTOMER_ID = U.CUSTOMER_ID AND T.ORDER_COUNT = U.MAX_ORDER_COUNT
+ORDER BY
+    T.ORDER_COUNT DESC
