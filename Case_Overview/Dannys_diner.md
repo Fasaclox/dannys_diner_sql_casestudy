@@ -14,4 +14,4 @@ Three key datasets for this case study
 - <strong>Members</strong>: The members table captures the join_date when a customer_id joined the beta version of the Danny’s Diner loyalty program.
 
 ## Entity Relationship Diagram
-![alt text](https://dbdiagram.io/d/608d07e4b29a09603d12edbd/?utm_source=dbdiagram_embed&utm_medium=bottom_open)
+![alt text](https://github.com/iweld/8-Week-SQL-Challenge/blob/main/Case%20Study%201%20-%20Danny's%20Diner/ERD.jpg)
