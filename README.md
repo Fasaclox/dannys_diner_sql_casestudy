@@ -1,4 +1,4 @@
-# dannys_diner_sql_casestudy
+# dannys_diner_sql_casestudy -1 
 Mssql queries of dannys diner dataset.
 
 The task is to provide answer to Dannys Question revealing insight from sales Data and ow Danny can impove his business. 
