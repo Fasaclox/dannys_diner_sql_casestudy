@@ -181,3 +181,110 @@ WHERE
     RN = 1
 ORDER BY
     CUSTOMER_ID;
+
+-- 7. Which item was purchased just before the customer became a member?
+WITH CTE_LAST_NON_MEMBER_PURCHASE AS (
+    SELECT M.CUSTOMER_ID AS CUSTOMER,
+        M2.PRODUCT_NAME AS PRODUCT,
+        RANK() OVER (
+            PARTITION BY M.CUSTOMER_ID
+            ORDER BY S.ORDER_DATE DESC
+        ) AS RNK
+    FROM MEMBERS AS M
+        JOIN SALES AS S ON S.CUSTOMER_ID = M.CUSTOMER_ID
+        JOIN MENU AS M2 ON S.PRODUCT_ID = M2.PRODUCT_ID
+    WHERE S.ORDER_DATE < M.JOIN_DATE
+)
+SELECT CUSTOMER,
+    PRODUCT
+FROM CTE_LAST_NON_MEMBER_PURCHASE
+WHERE RNK = 1;
+
+--8. What is the total items and amount spent for each member before they became a member?
+SELECT 
+	CUSTOMER_ID, 
+	SUM(ORDERS) AS TOTAL_ORDERS, 
+	SUM(PRICE*ORDERS) AS TOTAL_AMOUNT
+FROM (
+  SELECT 
+  MM.CUSTOMER_ID, 
+  JOIN_DATE, 
+  ORDER_DATE, 
+  COUNT(ORDER_DATE) AS ORDERS, 
+  PRICE
+  FROM MEMBERS AS MM 
+  INNER JOIN SALES AS SS ON MM.CUSTOMER_ID = SS.CUSTOMER_ID
+  INNER JOIN MENU AS MU ON SS.PRODUCT_ID=MU.PRODUCT_ID
+  WHERE ORDER_DATE < JOIN_DATE
+  GROUP BY MM.CUSTOMER_ID, JOIN_DATE, ORDER_DATE, PRICE
+) AS ORDERS_BEFORE_MEMBERSHIP
+GROUP BY CUSTOMER_ID;
+
+
+-- 9. If each $1 spent equates to 10 points and sushi has a 2x points multiplier - how many points would each customer have?
+SELECT
+    V.CUSTOMER_ID,
+    SUM(V.POINTS) AS TOTAL_POINTS
+FROM (
+    SELECT
+        CUSTOMER_ID, 
+        PRODUCT_NAME,
+        SUM(ORDERS * PRICE) AS TOTAL_AMOUNT,
+        CASE 
+            WHEN PRODUCT_NAME IN ('curry', 'ramen') THEN SUM(ORDERS * PRICE) * 10 
+            WHEN PRODUCT_NAME = 'sushi' THEN SUM(ORDERS * PRICE) * 20 
+            ELSE 0 
+        END AS POINTS
+    FROM 
+        CUSTOMER_ORDERS
+    GROUP BY 
+        CUSTOMER_ID, PRODUCT_NAME
+) AS V
+GROUP BY
+    V.CUSTOMER_ID
+ORDER BY TOTAL_POINTS DESC
+
+--10. In the first week after a customer joins the program (including their join date) they earn 2x points on all items, not just sushi - 
+--how many points do customer A and B have at the end of January?
+
+WITH JAN_ORDER AS (
+    SELECT 
+        [CUSTOMER_ID],
+        [PRODUCT_NAME],
+        [JOIN_DATE],
+        [ORDER_DATE],
+        SUM([ORDERS]) AS TOTAL_ORDER,
+        [PRICE]
+    FROM 
+        [DANNYS_DINER].[dbo].[ORDERS_AFTER_MEMBERSHIP]
+    WHERE 
+        MONTH(ORDER_DATE) = 1 AND YEAR(ORDER_DATE) = 2021
+    GROUP BY 
+        CUSTOMER_ID, PRODUCT_NAME, JOIN_DATE, ORDER_DATE, PRICE
+),
+JAN_POINTS AS (
+    SELECT 
+        [CUSTOMER_ID],
+        [PRODUCT_NAME],
+        [JOIN_DATE],
+        [ORDER_DATE],
+        [TOTAL_ORDER] * 20 AS ORDER_POINTS,
+        [PRICE],
+        SUM(TOTAL_ORDER * PRICE) AS TOTAL_AMOUNT,
+        CASE 
+            WHEN PRODUCT_NAME = 'ramen' THEN SUM(TOTAL_ORDER * PRICE) * 10 
+            WHEN PRODUCT_NAME = 'sushi' THEN SUM(TOTAL_ORDER * PRICE) * 20 
+            ELSE 0 
+        END AS POINTS
+    FROM 
+        JAN_ORDER
+    GROUP BY 
+        CUSTOMER_ID, PRODUCT_NAME, JOIN_DATE, ORDER_DATE, TOTAL_ORDER, PRICE
+)
+SELECT 
+    [CUSTOMER_ID],
+    SUM([ORDER_POINTS] + POINTS) AS TOTAL_JAN_POINTS
+FROM 
+    JAN_POINTS
+GROUP BY 
+    CUSTOMER_ID;
